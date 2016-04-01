@@ -1,1 +1,2 @@
-cognitive control simulation in nengo
+Cognitive Control Neural Simulation in Nengo
+============
