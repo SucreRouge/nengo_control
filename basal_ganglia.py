@@ -9,7 +9,7 @@ This is basically just the basal ganglia example
 
 # Create the network (BG and action input node)
 
-net = nengo.Network(label='Basal Ganglia')
+model = nengo.Network(label='Basal Ganglia')
 
 with model:
     basal_ganglia = nango.networks.BasalGanglia(dimensions=3)
