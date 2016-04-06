@@ -42,8 +42,10 @@ with model:
 
 with model:
     cortex = nengo.Probe(model.cortex.state.output, synapse=0.01)
-    actions = nengo.Probe(model.thal.actions.output, synapse=0.01)
-    utility = nengo.Probe(model.bg.input, synapse=0.01)
+    #actions = nengo.Probe(model.thal.actions.output, synapse=0.01)
+    thalamus = nengo.Probe(model.thal.actions.output, synapse=0.01)
+    bg = nengo.Probe(model.bg.gpi.output, synapse=0.01)
+    #utility = nengo.Probe(model.bg.input, synapse=0.01)
 
 ############################
 #### Run the Simulation ####
@@ -56,6 +58,8 @@ length_sim = 360 # 6 minute scan = 360
 sim.run(length_sim)
 
 ctx_output = model.similarity(sim.data, cortex)
+thal_output = sim.data[thalamus]
+bg_output = sim.data[bg]
 
 #################################
 #### Generate BOLD Response #####
@@ -67,48 +71,73 @@ tr_time = np.arange(0, length_sim, TR)
 hrf_at_trs = hrf(tr_time)
 
 # sample from neural output
-on_output = ctx_output[:,1]
-output = []
-for i in range(1,len(on_output)+1):
+ctx_on_output = ctx_output[:,1]
+thal_on_output = thal_output[:,1]
+bg_on_output = bg_output[:,1]
+output_ctx = []
+output_thal = []
+output_bg = []
+for i in range(1,len(ctx_on_output)+1):
     #if i % (TR * 1000) == 0:
     if i % 400 == 0:
-        output.append(on_output[i-1])
-neural_output = np.asarray(output)
-num_vols = len(neural_output)
+        output_ctx.append(ctx_on_output[i-1])
+        output_thal.append(thal_on_output[i-1])
+        output_bg.append(bg_on_output[i-1])
+
+neural_output = [[]] * 3
+neural_output[0] = np.asarray(output_ctx)
+neural_output[1] = np.asarray(output_thal)
+neural_output[2] = np.asarray(output_bg)
+
+num_vols = len(neural_output[0])
 
 all_tr_times = np.arange(num_vols) * TR
 
-convolved = np.convolve(neural_output, hrf_at_trs)
-remove = len(hrf_at_trs) - 1
-convolved = convolved[:-remove]
+convolved = [[]] * 3
+convolved[0] = np.convolve(neural_output[0], hrf_at_trs)
+convolved[1] = np.convolve(neural_output[1], hrf_at_trs)
+convolved[2] = np.convolve(neural_output[2], hrf_at_trs)
 
-plt.plot(all_tr_times, neural_output)
-plt.plot(all_tr_times, convolved)
+remove = len(hrf_at_trs) - 1
+convolved[0] = convolved[0][:-remove]
+convolved[1] = convolved[1][:-remove]
+convolved[2] = convolved[2][:-remove]
+
+np.savetxt('simBOLD_360sec_TR2_6secstim.csv',np.asarray(convolved),delimiter=',')
+
+fig = plt.figure(figsize=(12,8))
+ylabels = ['ctx','thal','bg']
+for i in range(len(convolved)):
+    p = fig.add_subplot(3,1,i)
+    p.plot(all_tr_times, neural_output[i])
+    p.plot(all_tr_times, convolved[i])
+    p.set_ylabel(ylabels[i])
+
 plt.show()
 
 ###########################
 #### Plot probed info #####
 ###########################
 
-fig = plt.figure(figsize=(12,8))
-p1 = fig.add_subplot(3,1,1)
-
-p1.plot(sim.trange(), model.similarity(sim.data, cortex))
-p1.legend(model.get_output_vocab('cortex').keys, fontsize='x-small')
-p1.set_ylabel('State')
-
-p2 = fig.add_subplot(3,1,2)
-p2.plot(sim.trange(), sim.data[actions])
-p2_legend_txt = [a.effect for a in model.bg.actions.actions]
-p2.legend(p2_legend_txt, fontsize='x-small')
-p2.set_ylabel('Action')
-
-p3 = fig.add_subplot(3,1,3)
-p3.plot(sim.trange(), sim.data[utility])
-p3_legend_txt = [a.condition for a in model.bg.actions.actions]
-p3.legend(p3_legend_txt, fontsize='x-small')
-p3.set_ylabel('Utility')
-
-fig.subplots_adjust(hspace=0.2)
+# fig = plt.figure(figsize=(12,8))
+# p1 = fig.add_subplot(3,1,1)
+#
+# p1.plot(sim.trange(), model.similarity(sim.data, cortex))
+# p1.legend(model.get_output_vocab('cortex').keys, fontsize='x-small')
+# p1.set_ylabel('State')
+#
+# p2 = fig.add_subplot(3,1,2)
+# p2.plot(sim.trange(), sim.data[actions])
+# p2_legend_txt = [a.effect for a in model.bg.actions.actions]
+# p2.legend(p2_legend_txt, fontsize='x-small')
+# p2.set_ylabel('Action')
+#
+# p3 = fig.add_subplot(3,1,3)
+# p3.plot(sim.trange(), sim.data[utility])
+# p3_legend_txt = [a.condition for a in model.bg.actions.actions]
+# p3.legend(p3_legend_txt, fontsize='x-small')
+# p3.set_ylabel('Utility')
+#
+# fig.subplots_adjust(hspace=0.2)
 
 #plt.show()
