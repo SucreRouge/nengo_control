@@ -26,9 +26,21 @@ with model:
 ##########################
 #### Input Definition ####
 ##########################
-
+#
+# def stim_input(t):
+#     if (t // 6) % 2 == 0:
+#         return 'ON'
+#     else:
+#         return 'OFF'
+val1 = 7#2
+val2 = 12#2.5
 def stim_input(t):
-    if (t // 6) % 2 == 0:
+    global val1
+    global val2
+    if (t <= val2) and (t >= val1):
+        if t == val2:
+            val1 += 12#2
+            val2 += 12#2
         return 'ON'
     else:
         return 'OFF'
@@ -71,15 +83,15 @@ tr_time = np.arange(0, length_sim, TR)
 hrf_at_trs = hrf(tr_time)
 
 # sample from neural output
-ctx_on_output = ctx_output[:,1]
-thal_on_output = thal_output[:,1]
-bg_on_output = bg_output[:,1]
+ctx_on_output = ctx_output[:,0] #1
+thal_on_output = thal_output[:,0]
+bg_on_output = bg_output[:,0]
 output_ctx = []
 output_thal = []
 output_bg = []
 for i in range(1,len(ctx_on_output)+1):
-    #if i % (TR * 1000) == 0:
-    if i % 400 == 0:
+    if i % (TR * 1000) == 0:
+    #if i % 200 == 0:
         output_ctx.append(ctx_on_output[i-1])
         output_thal.append(thal_on_output[i-1])
         output_bg.append(bg_on_output[i-1])
@@ -103,7 +115,7 @@ convolved[0] = convolved[0][:-remove]
 convolved[1] = convolved[1][:-remove]
 convolved[2] = convolved[2][:-remove]
 
-np.savetxt('simBOLD_360sec_TR2_6secstim.csv',np.asarray(convolved),delimiter=',')
+np.savetxt('simBOLD_360sec_TR2_7sOFF_5sON_stim.csv',np.asarray(convolved),delimiter=',')
 
 fig = plt.figure(figsize=(12,8))
 ylabels = ['ctx','thal','bg']
