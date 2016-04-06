@@ -32,15 +32,15 @@ with model:
 #         return 'ON'
 #     else:
 #         return 'OFF'
-val1 = 7#2
-val2 = 12#2.5
+val1 = 14#2
+val2 = 24#2.5
 def stim_input(t):
     global val1
     global val2
     if (t <= val2) and (t >= val1):
         if t == val2:
-            val1 += 12#2
-            val2 += 12#2
+            val1 += 24#2
+            val2 += 24#2
         return 'ON'
     else:
         return 'OFF'
@@ -73,9 +73,9 @@ ctx_output = model.similarity(sim.data, cortex)
 thal_output = sim.data[thalamus]
 bg_output = sim.data[bg]
 
-#################################
-#### Generate BOLD Response #####
-#################################
+########################################
+#### Generate Hemodynamic Response #####
+########################################
 
 TR = 2
 tr_time = np.arange(0, length_sim, TR)
@@ -90,11 +90,11 @@ output_ctx = []
 output_thal = []
 output_bg = []
 for i in range(1,len(ctx_on_output)+1):
-    if i % (TR * 1000) == 0:
-    #if i % 200 == 0:
-        output_ctx.append(ctx_on_output[i-1])
-        output_thal.append(thal_on_output[i-1])
-        output_bg.append(bg_on_output[i-1])
+   if i % (TR * 1000) == 0:
+##    if i % 200 == 0:
+       output_ctx.append(ctx_on_output[i-1])
+       output_thal.append(thal_on_output[i-1])
+       output_bg.append(bg_on_output[i-1])
 
 neural_output = [[]] * 3
 neural_output[0] = np.asarray(output_ctx)
@@ -115,15 +115,36 @@ convolved[0] = convolved[0][:-remove]
 convolved[1] = convolved[1][:-remove]
 convolved[2] = convolved[2][:-remove]
 
-np.savetxt('simBOLD_360sec_TR2_7sOFF_5sON_stim.csv',np.asarray(convolved),delimiter=',')
+sampled_ctx = []
+sampled_thal = []
+sampled_bg = []
+for i in range(1,len(convolved[0])+1):
+   #if i % (TR * 1000) == 0:
+   sampled_ctx.append(convolved[0][i-1])
+   sampled_thal.append(convolved[1][i-1])
+   sampled_bg.append(convolved[2][i-1])
 
-fig = plt.figure(figsize=(12,8))
-ylabels = ['ctx','thal','bg']
+sampled_BOLD = [sampled_ctx, sampled_thal, sampled_bg]
+
+np.savetxt('simBOLD_360sec_TR2_14sOFF_10sON_stim.csv',np.asarray(sampled_BOLD),delimiter=',')
+
+labels = ['ctx','thal','bg']
+
+fig  = plt.figure(figsize=(12,8))
+
 for i in range(len(convolved)):
-    p = fig.add_subplot(3,1,i)
-    p.plot(all_tr_times, neural_output[i])
-    p.plot(all_tr_times, convolved[i])
-    p.set_ylabel(ylabels[i])
+    p1 = fig.add_subplot(2,1,1)
+    p1.plot(all_tr_times, neural_output[i], label=labels[i])
+    p1.set_ylabel('neural output')
+    #p1.set_title(labels[i])
+
+    p2 = fig.add_subplot(2,1,2)
+    p2.plot(np.arange(len(sampled_BOLD[i])), sampled_BOLD[i], label=labels[i])
+    p2.set_ylabel('estimated BOLD response (TR=2)')
+
+
+p1.legend(labels, 'upper right')
+p2.legend(labels, 'upper right')
 
 plt.show()
 
