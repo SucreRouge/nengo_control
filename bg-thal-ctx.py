@@ -79,54 +79,46 @@ bg_output = sim.data[bg]
 
 TR = 2
 tr_time = np.arange(0, length_sim, TR)
-
 hrf_at_trs = hrf(tr_time)
 
 # sample from neural output
-ctx_on_output = ctx_output[:,0] #1
-thal_on_output = thal_output[:,0]
-bg_on_output = bg_output[:,0]
-output_ctx = []
-output_thal = []
-output_bg = []
-for i in range(1,len(ctx_on_output)+1):
-   if i % (TR * 1000) == 0:
-##    if i % 200 == 0:
-       output_ctx.append(ctx_on_output[i-1])
-       output_thal.append(thal_on_output[i-1])
-       output_bg.append(bg_on_output[i-1])
+numNets = 3
 
-neural_output = [[]] * 3
-neural_output[0] = np.asarray(output_ctx)
-neural_output[1] = np.asarray(output_thal)
-neural_output[2] = np.asarray(output_bg)
+neural_output = [[]] * numNets
+convolved = [[]] * numNets
+sampled_BOLD = []
+for n in range(numNets):
+    output = []
+    if n == 0:
+        on_output = ctx_output[:,0]
+    elif n == 1:
+        on_output = thal_output[:,0]
+    elif n == 2:
+        on_output = bg_output[:,0]
 
-num_vols = len(neural_output[0])
+    for i in range(1,len(on_output)+1):
+        if i % (TR * 1000) == 0:
+            output.append(on_output[i-1])
 
-all_tr_times = np.arange(num_vols) * TR
+    neural_output[n] = np.asarray(output)
 
-convolved = [[]] * 3
-convolved[0] = np.convolve(neural_output[0], hrf_at_trs)
-convolved[1] = np.convolve(neural_output[1], hrf_at_trs)
-convolved[2] = np.convolve(neural_output[2], hrf_at_trs)
+    num_vols = len(neural_output[n])
 
-remove = len(hrf_at_trs) - 1
-convolved[0] = convolved[0][:-remove]
-convolved[1] = convolved[1][:-remove]
-convolved[2] = convolved[2][:-remove]
+    all_tr_times = np.arange(num_vols) * TR
 
-sampled_ctx = []
-sampled_thal = []
-sampled_bg = []
-for i in range(1,len(convolved[0])+1):
-   #if i % (TR * 1000) == 0:
-   sampled_ctx.append(convolved[0][i-1])
-   sampled_thal.append(convolved[1][i-1])
-   sampled_bg.append(convolved[2][i-1])
+    convolved[n] = np.convolve(neural_output[n], hrf_at_trs)
 
-sampled_BOLD = [sampled_ctx, sampled_thal, sampled_bg]
+    remove = len(hrf_at_trs) - 1
+    convolved[n] = convolved[n][:-remove]
 
-np.savetxt('simBOLD_360sec_TR2_14sOFF_10sON_stim.csv',np.asarray(sampled_BOLD),delimiter=',')
+    sampled = []
+    for i in range(1,len(convolved[n])+1):
+        #if i % (TR * 1000) == 0:
+        sampled.append(convolved[n][i-1])
+
+    sampled_BOLD.append(sampled)
+
+#np.savetxt('simBOLD_360sec_TR2_14sOFF_10sON_stim.csv',np.asarray(sampled_BOLD),delimiter=',')
 
 labels = ['ctx','thal','bg']
 
