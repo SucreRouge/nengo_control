@@ -32,18 +32,67 @@ with model:
 #         return 'ON'
 #     else:
 #         return 'OFF'
-val1 = 14#2
-val2 = 24#2.5
+
+# val1 = 14#2
+# val2 = 24#2.5
+# def stim_input(t):
+#     global val1
+#     global val2
+#     if (t <= val2) and (t >= val1):
+#         if t == val2:
+#             val1 += 24#2
+#             val2 += 24#2
+#         return 'ON'
+#     else:
+#         return 'OFF'
+
+trialCount = 0
+elapsed = 0
+nTrials = 50
+
+def trialLength():
+    times = [0.2,0.3,0.4,0.5,0.6]
+    return random.choice(times)
+
+def trialType():
+    return random.choice(["GO","STOP"])
+
+def ITI():
+    return random.choice([0.5,0.5,0.5,0.5])
+
+trial_params = {"len":[],"iti":[],"type":[]}
+for i in range(nTrials):
+    trial_params["len"].append(trialLength())
+    trial_params["iti"].append(ITI())
+    trial_params["type"].append(trialType())
+
 def stim_input(t):
-    global val1
-    global val2
-    if (t <= val2) and (t >= val1):
-        if t == val2:
-            val1 += 24#2
-            val2 += 24#2
-        return 'ON'
-    else:
-        return 'OFF'
+    global trialCount
+    global elapsed
+    global trial_params
+
+    trial_length = trial_params["len"][trialCount]
+    iti = trial_params["iti"][trialCount]
+    trial_type = trial_params["type"][trialCount]
+
+    if t <= iti + elapsed:
+
+        return "REST"
+
+    elif t > iti + elapsed and t <= iti + elapsed + trial_length:
+        ceiling = iti + elapsed + trial_length
+        if t == ceiling or t > (ceiling - 0.005):
+            trialCount += 1
+            elapsed = t
+        if trial_type == "GO":
+            return "GO"
+        else:
+            return "STOP"
+
+
+
+
+
 
 with model:
     model.input = spa.Input(cortex=stim_input)
@@ -66,7 +115,8 @@ with model:
 # Create the simulator object
 sim = nengo.Simulator(model)
 # Simulate the model for 2 seconds
-length_sim = 360 # 6 minute scan = 360
+#length_sim = 10 # 6 minute scan = 360
+length_sim = np.sum(trial_params["len"]) + np.sum(trial_params["iti"])
 sim.run(length_sim)
 
 ctx_output = model.similarity(sim.data, cortex)
