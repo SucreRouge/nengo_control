@@ -17,8 +17,9 @@ with model:
 
     #action mapping
     actions = spa.Actions(
-        'dot(cortex, ON) --> cortex = ON',
-        'dot(cortex, OFF) --> cortex = OFF',
+        'dot(cortex, ON_1) --> cortex = ON_1',
+        'dot(cortex, ON_2) --> cortex = ON_2',
+        'dot(cortex, REST) --> cortex = REST'
     )
     model.bg = spa.BasalGanglia(actions=actions)
     model.thal = spa.Thalamus(model.bg)
@@ -27,53 +28,52 @@ with model:
 #### Input Definition ####
 ##########################
 #
-# def stim_input(t):
-#     if (t // 6) % 2 == 0:
-#         return 'ON'
-#     else:
-#         return 'OFF'
-
-# val1 = 14#2
-# val2 = 24#2.5
-# def stim_input(t):
-#     global val1
-#     global val2
-#     if (t <= val2) and (t >= val1):
-#         if t == val2:
-#             val1 += 24#2
-#             val2 += 24#2
-#         return 'ON'
-#     else:
-#         return 'OFF'
 
 trialCount = 0
 elapsed = 0
-nTrials = 50
+nTrials = 4
+stim_length = 20
+rest_length = 40
 
 def trialLength():
-    times = [0.2,0.3,0.4,0.5,0.6]
+    global stim_length
+    #times = [0.2,0.3,0.4,0.5,0.6]
+    times = [stim_length]
     return random.choice(times)
 
-def trialType():
-    return random.choice(["GO","STOP"])
+def trialType(i):
+    if i % 2 == 0:
+        return "ON_1"
+    else:
+        return "ON_2"
+    #return random.choice(["ON_1","ON_2"])
 
 def ITI():
-    return random.choice([0.5,0.5,0.5,0.5])
+    global rest_length
+
+    times = [0.5,0.5,0.5,0.5]
+    times = [rest_length]
+    return random.choice(times)
 
 trial_params = {"len":[],"iti":[],"type":[]}
 for i in range(nTrials):
     trial_params["len"].append(trialLength())
     trial_params["iti"].append(ITI())
-    trial_params["type"].append(trialType())
+    trial_params["type"].append(trialType(i))
 
 def stim_input(t):
     global trialCount
     global elapsed
     global trial_params
 
-    trial_length = trial_params["len"][trialCount]
-    iti = trial_params["iti"][trialCount]
-    trial_type = trial_params["type"][trialCount]
+    if trialCount == nTrials:
+        t_ind = trialCount - 1
+    else:
+        t_ind = trialCount
+
+    trial_length = trial_params["len"][t_ind]
+    iti = trial_params["iti"][t_ind]
+    trial_type = trial_params["type"][t_ind]
 
     if t <= iti + elapsed:
 
@@ -84,14 +84,10 @@ def stim_input(t):
         if t == ceiling or t > (ceiling - 0.005):
             trialCount += 1
             elapsed = t
-        if trial_type == "GO":
-            return "GO"
+        if trial_type == "ON_1":
+            return "ON_1"
         else:
-            return "STOP"
-
-
-
-
+            return "ON_1*ON_2"
 
 
 with model:
@@ -127,7 +123,7 @@ bg_output = sim.data[bg]
 #### Generate Hemodynamic Response #####
 ########################################
 
-TR = 2
+TR = 0.7
 tr_time = np.arange(0, length_sim, TR)
 hrf_at_trs = hrf(tr_time)
 
@@ -137,14 +133,22 @@ numNets = 3
 neural_output = [[]] * numNets
 convolved = [[]] * numNets
 sampled_BOLD = []
+
+mean_ctx = np.mean(ctx_output,axis=1)
+mean_thal = np.mean(thal_output,axis=1)
+mean_bg = np.mean(bg_output,axis=1)
+
 for n in range(numNets):
     output = []
     if n == 0:
-        on_output = ctx_output[:,0]
+        #on_output = ctx_output[:,0]
+        on_output = mean_ctx
     elif n == 1:
-        on_output = thal_output[:,0]
+        #on_output = thal_output[:,0]
+        on_output = mean_thal
     elif n == 2:
-        on_output = bg_output[:,0]
+        #on_output = bg_output[:,0]
+        on_output = mean_bg
 
     for i in range(1,len(on_output)+1):
         if i % (TR * 1000) == 0:
